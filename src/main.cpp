@@ -1,36 +1,20 @@
-#include "../include/main.hpp"
+#include "../include/cell.hpp"
+#include "../include/grid.hpp"
+#include "../rpi3-drivers/include/framebuffer.hpp"
 #include "../rpi3-drivers/include/uart0.hpp"
 #include "../transient-os/include/kernel/kernel.hpp"
 #include "../transient-os/include/utils/concurrency/atomic.hpp"
 
 using namespace kernel::threads;
 
-void print_task(void *arg) {
-  PrintTaskArgs *args = reinterpret_cast<PrintTaskArgs *>(arg);
+void cell_thread(void *arg) {
+  CellThreadArg *cell = reinterpret_cast<CellThreadArg *>(arg);
 
-  // Print thread ID
-  {
-    AtomicBlock block;
-    uart0::hex(kernel::get_thread_id());
-    uart0::puts(": ");
-    uart0::puts("Starting thread\n");
-  }
-
-  asm volatile("wfi");
-
-  for (uint64_t i = 0; i < args->count; i++) {
+  while (true) {
     {
-      AtomicBlock block;
-      uart0::hex(kernel::get_thread_id());
-      uart0::puts(": ");
-      uart0::puts(args->msg);
+      AtomicBlock guard;
+      cell->render();
     }
-  }
-
-  {
-    AtomicBlock block;
-    uart0::hex(kernel::get_thread_id());
-    uart0::puts(": completed!\n");
   }
 }
 
@@ -38,23 +22,49 @@ int main() {
   uart0::init();
   kernel::set_output_handler(&uart0::puts);
 
-  uart0::puts("Hello, world!\n");
+  if (!framebuffer::init()) {
+    uart0::puts("Framebuffer initialization failed\n");
+    return 1;
+  }
 
-  // Create and schedule n tasks
-  constexpr uint64_t n = 6;
-  ThreadControlBlock handles[n];
+  framebuffer::fill_screen(0xFF0000);
+  uart0::puts("Framebuffer initialized\n");
 
-  PrintTaskArgs handle_args("Thread!\n", 3);
+  // Game initialization
+  CellGrid grid_a = CellGrid();
+  CellGrid grid_b = CellGrid();
 
-  for (uint64_t i = 0; i < n; i++) {
-    handles[i] = ThreadControlBlock(&print_task, 2000, &handle_args);
+  uart0::puts("Cell grids initialized\n");
 
-    if (!kernel::schedule_thread(handles + i)) {
-      uart0::puts("Failed to schedule thread\n");
-      break;
+  CellThreadArg args[GRID_ROWS][GRID_COLS] = {{CellThreadArg()}};
+  ThreadControlBlock threads[GRID_ROWS][GRID_COLS] = {{ThreadControlBlock()}};
+
+  uart0::puts("Declared arrays\n");
+
+  for (int i = 0; i < GRID_ROWS; i++) {
+    for (int j = 0; j < GRID_COLS; j++) {
+      threads[i][j] = ThreadControlBlock(&cell_thread, 2000, &args[i][j]);
+
+      args[i][j].current_grid = &grid_a;
+      args[i][j].next_grid = &grid_b;
+      args[i][j].x = i;
+      args[i][j].y = j;
+
+      uart0::puts("Thread initialized\n");
     }
   }
 
+  // Schedule each thread
+  for (int i = 0; i < GRID_ROWS; i++) {
+    for (int j = 0; j < GRID_COLS; j++) {
+      if (!kernel::schedule_thread(&threads[i][j])) {
+        uart0::puts("Failed to schedule thread\n");
+        return 1;
+      }
+    }
+  }
+
+  uart0::puts("Starting kernel\n");
   kernel::start();
 
   return 0;
