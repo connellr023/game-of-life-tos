@@ -3,19 +3,19 @@
 
 #include "grid.hpp"
 
-#define CELL_PIXEL_SIZE 30
-#define CELL_ALIVE_COLOR 0x00FF00
-#define CELL_DEAD_COLOR 0x0000FF
+#define CELL_PIXEL_SIZE 16
+#define CELL_ALIVE_COLOR 0xFFFFFF
+#define CELL_DEAD_COLOR 0x000000
 
 struct CellThreadArg {
 public:
-  CellGrid *current_grid;
-  CellGrid *next_grid;
+  GridManager *grid_manager;
+
   int x;
   int y;
 
   CellState get_current_state() {
-    return current_grid->get_cell(this->x, this->y);
+    return grid_manager->get_current_grid()->get_cell(x, y);
   }
 
   void render();
