@@ -1,0 +1,6 @@
+[submodule "lib-rpi3-drivers"]
+	path = lib-rpi3-drivers
+	url = git@github.com:connellr023/lib-rpi3-drivers.git
+[submodule "transient-os"]
+	path = transient-os
+	url = git@github.com:connellr023/transient-os.git
