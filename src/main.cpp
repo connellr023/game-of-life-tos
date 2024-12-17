@@ -1,4 +1,3 @@
-#include "../include/cell.hpp"
 #include "../include/grid.hpp"
 #include "../rpi3-drivers/include/clock.hpp"
 #include "../rpi3-drivers/include/framebuffer.hpp"
@@ -8,26 +7,40 @@
 
 using namespace kernel::threads;
 
+/**
+ * Grid swap thread
+ * This thread is responsible for swapping the current and next grids
+ * once all the cell threads have finished updating the next grid.
+ */
 void grid_swap_thread(void *arg) {
   GridManager *grid_manager = reinterpret_cast<GridManager *>(arg);
 
   while (true) {
-    if (grid_manager->get_ready_threads() >= CELL_COUNT) {
+    if (grid_manager->get_ready_threads() >= 2) {
       AtomicBlock guard;
       grid_manager->swap_grids();
-    } else {
-      kernel::yield();
     }
+
+    kernel::yield();
   }
 }
 
+/**
+ * Cell thread
+ * This thread is responsible for updating the state of a single cell
+ * in the grid.
+ */
 void cell_thread(void *arg) {
   CellThreadArg *cell = reinterpret_cast<CellThreadArg *>(arg);
 
   while (true) {
+    // Render the cell
+    cell->render();
+
     // Check if the cell is alive
     CellState current_state;
 
+    // Safe get the current state
     {
       AtomicBlock guard;
       current_state = cell->get_current_state();
@@ -79,19 +92,20 @@ void cell_thread(void *arg) {
       }
     }
 
+    // Safe update the next grid
     {
       AtomicBlock guard;
       cell->grid_manager->get_next_grid()->set_cell(cell->x, cell->y,
                                                     next_state);
     }
 
-    cell->render();
-
+    // Safe increment the number of ready threads
     {
       AtomicBlock guard;
       cell->grid_manager->increment_ready_threads();
     }
 
+    // Pass control to the next thread
     kernel::yield();
   }
 }
@@ -112,10 +126,6 @@ int main() {
   CellGrid grid_a = CellGrid();
   CellGrid grid_b = CellGrid();
 
-  GridManager grid_manager = GridManager(&grid_a, &grid_b);
-  ThreadControlBlock grid_swap_thread_tcb =
-      ThreadControlBlock(&grid_swap_thread, 2500, &grid_manager);
-
   // Randomly initialize the grid
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
@@ -124,20 +134,24 @@ int main() {
     }
   }
 
-  uart0::puts("Cell grids initialized\n");
-
   CellThreadArg args[GRID_ROWS][GRID_COLS] = {{CellThreadArg()}};
   ThreadControlBlock threads[GRID_ROWS][GRID_COLS] = {{ThreadControlBlock()}};
+
+  GridManager grid_manager = GridManager(&grid_a, &grid_b);
+  ThreadControlBlock grid_swap_thread_tcb =
+      ThreadControlBlock(&grid_swap_thread, 2000, &grid_manager);
 
   uart0::puts("Declared arrays\n");
 
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
-      threads[i][j] = ThreadControlBlock(&cell_thread, 2000, &args[i][j]);
+      const uint64_t burst_time = clock::random_range(1800, 2500);
+      threads[i][j] = ThreadControlBlock(&cell_thread, burst_time, &args[i][j]);
 
-      args[i][j].grid_manager = &grid_manager;
-      args[i][j].x = i;
-      args[i][j].y = j;
+      CellThreadArg *cell = &args[i][j];
+      cell->grid_manager = &grid_manager;
+      cell->x = i;
+      cell->y = j;
 
       uart0::puts("Thread initialized\n");
     }

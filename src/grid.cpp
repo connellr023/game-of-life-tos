@@ -1,4 +1,4 @@
-#include "../include/cell.hpp"
+#include "../include/grid.hpp"
 #include "../rpi3-drivers/include/framebuffer.hpp"
 
 void CellThreadArg::render() {
@@ -12,4 +12,8 @@ void CellThreadArg::render() {
   const int screen_y_end = screen_y + CELL_PIXEL_SIZE - 1;
 
   framebuffer::draw_rect(screen_x, screen_y, screen_x_end, screen_y_end, color);
+}
+
+CellState CellThreadArg::get_current_state() {
+  return this->grid_manager->get_current_grid()->get_cell(x, y);
 }

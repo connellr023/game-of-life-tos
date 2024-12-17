@@ -1,11 +1,15 @@
 #ifndef GRID_HPP
 #define GRID_HPP
 
+#include <stdint.h>
+
 #define GRID_ROWS 15
 #define GRID_COLS 16
 #define CELL_COUNT (GRID_ROWS * GRID_COLS)
 
-#include <stdint.h>
+#define CELL_PIXEL_SIZE 16
+#define CELL_ALIVE_COLOR 0xFFFFFF
+#define CELL_DEAD_COLOR 0x000000
 
 enum class CellState {
   Dead,
@@ -56,6 +60,17 @@ public:
     this->current_grid = !this->current_grid;
     this->ready_threads = 0;
   }
+};
+
+struct CellThreadArg {
+public:
+  GridManager *grid_manager;
+
+  int x;
+  int y;
+
+  CellState get_current_state();
+  void render();
 };
 
 #endif // GRID_HPP
