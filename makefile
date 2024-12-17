@@ -5,7 +5,7 @@ BUILD_DIR_NAME = build
 SRC_DIR = ./$(SRC_DIR_NAME)
 BUILD_DIR = ./$(BUILD_DIR_NAME)
 INCLUDE_DIR = ./include
-LIB_RPI3_DRIVERS_DIR = ./lib-rpi3-drivers
+LIB_RPI3_DRIVERS_DIR = ./rpi3-drivers
 TRANSIENT_OS_DIR = ./transient-os
 
 # Find all .c, .cpp, and .s files recursively in the source directory
@@ -15,7 +15,7 @@ OBJS := $(patsubst $(SRC_DIR)/%, $(BUILD_DIR)/%, $(OBJS:.cpp=.o))
 OBJS := $(patsubst $(SRC_DIR)/%, $(BUILD_DIR)/%, $(OBJS:.s=.o))
 
 # Static libraries
-LIBS = $(LIB_RPI3_DRIVERS_DIR)/build/lib-rpi3-drivers.a $(TRANSIENT_OS_DIR)/build/lib-transientos.a
+LIBS = $(LIB_RPI3_DRIVERS_DIR)/build/librpi3-drivers.a $(TRANSIENT_OS_DIR)/build/libtransient-os.a
 
 # Compiler and linker flags
 CFLAGS = -fno-exceptions -fno-rtti -Wall -Wextra -I$(INCLUDE_DIR) -I$(LIB_RPI3_DRIVERS_DIR)/include -I$(TRANSIENT_OS_DIR)/include
@@ -29,8 +29,8 @@ all: $(LIBS) $(TARGET)
 # Build the ELF and IMG files
 $(TARGET): $(OBJS) $(LIBS)
 	ld.lld -m aarch64elf $(OBJS) \
-		$(LIB_RPI3_DRIVERS_DIR)/build/lib-rpi3-drivers.a \
-		$(TRANSIENT_OS_DIR)/build/lib-transientos.a \
+		$(LIB_RPI3_DRIVERS_DIR)/build/librpi3-drivers.a \
+		$(TRANSIENT_OS_DIR)/build/libtransient-os.a \
 		-T $(TRANSIENT_OS_DIR)/link.ld -o $(BUILD_DIR)/kernel8.elf
 	llvm-objcopy -O binary $(BUILD_DIR)/kernel8.elf $(TARGET)
 
@@ -45,10 +45,10 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
 # Build submodule libraries
-$(LIB_RPI3_DRIVERS_DIR)/build/lib-rpi3-drivers.a:
+$(LIB_RPI3_DRIVERS_DIR)/build/librpi3-drivers.a:
 	$(MAKE) -C $(LIB_RPI3_DRIVERS_DIR)
 
-$(TRANSIENT_OS_DIR)/build/lib-transientos.a:
+$(TRANSIENT_OS_DIR)/build/libtransient-os.a:
 	$(MAKE) -C $(TRANSIENT_OS_DIR)
 
 # Clean build artifacts

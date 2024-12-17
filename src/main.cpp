@@ -1,5 +1,5 @@
 #include "../include/main.hpp"
-#include "../lib-rpi3-drivers/include/uart0.hpp"
+#include "../rpi3-drivers/include/uart0.hpp"
 #include "../transient-os/include/kernel/kernel.hpp"
 #include "../transient-os/include/utils/concurrency/atomic.hpp"
 
@@ -36,7 +36,7 @@ void print_task(void *arg) {
 
 int main() {
   uart0::init();
-  kernel::init_dbg_out(&uart0::puts, &uart0::hex);
+  kernel::set_output_handler(&uart0::puts);
 
   uart0::puts("Hello, world!\n");
 
