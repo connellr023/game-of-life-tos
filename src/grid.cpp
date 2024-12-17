@@ -17,3 +17,24 @@ void CellThreadArg::render() {
 CellState CellThreadArg::get_current_state() {
   return this->grid_manager->get_current_grid()->get_cell(x, y);
 }
+
+CellGrid *GridManager::get_current_grid() {
+  if (this->current_grid) {
+    return this->grid_a;
+  } else {
+    return this->grid_b;
+  }
+}
+
+CellGrid *GridManager::get_next_grid() {
+  if (this->current_grid) {
+    return this->grid_b;
+  } else {
+    return this->grid_a;
+  }
+}
+
+void GridManager::swap_grids() {
+  this->current_grid = !this->current_grid;
+  this->ready_threads = 0;
+}

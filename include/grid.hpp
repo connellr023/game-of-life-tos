@@ -37,29 +37,12 @@ public:
   GridManager(CellGrid *grid_a, CellGrid *grid_b)
       : current_grid(true), ready_threads(0), grid_a(grid_a), grid_b(grid_b) {}
 
-  CellGrid *get_current_grid() {
-    if (this->current_grid) {
-      return this->grid_a;
-    } else {
-      return this->grid_b;
-    }
-  }
-
-  CellGrid *get_next_grid() {
-    if (this->current_grid) {
-      return this->grid_b;
-    } else {
-      return this->grid_a;
-    }
-  }
+  CellGrid *get_current_grid();
+  CellGrid *get_next_grid();
+  void swap_grids();
 
   uint32_t get_ready_threads() { return this->ready_threads; }
   void increment_ready_threads() { this->ready_threads++; }
-
-  void swap_grids() {
-    this->current_grid = !this->current_grid;
-    this->ready_threads = 0;
-  }
 };
 
 struct CellThreadArg {
