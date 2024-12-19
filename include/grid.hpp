@@ -34,8 +34,12 @@ private:
   CellGrid *grid_b;
 
 public:
-  GridManager(CellGrid *grid_a, CellGrid *grid_b)
-      : current_grid(true), ready_threads(0), grid_a(grid_a), grid_b(grid_b) {}
+  void init(CellGrid *grid_a, CellGrid *grid_b) {
+    this->current_grid = true;
+    this->ready_threads = 0;
+    this->grid_a = grid_a;
+    this->grid_b = grid_b;
+  }
 
   CellGrid *get_current_grid();
   CellGrid *get_next_grid();
@@ -45,15 +49,30 @@ public:
   void increment_ready_threads() { this->ready_threads++; }
 };
 
-struct CellThreadArg {
-public:
+class CellThreadArg {
+private:
   GridManager *grid_manager;
 
   int x;
   int y;
 
-  CellState get_current_state();
-  void render();
+public:
+  void init(GridManager *grid_manager, int x, int y) {
+    this->grid_manager = grid_manager;
+    this->x = x;
+    this->y = y;
+  }
+
+  int get_x() const { return this->x; }
+  int get_y() const { return this->y; }
+
+  CellState get_current_state() const {
+    return this->grid_manager->get_current_grid()->get_cell(x, y);
+  }
+
+  GridManager *get_grid_manager() { return this->grid_manager; }
+
+  void render() const;
 };
 
 #endif // GRID_HPP

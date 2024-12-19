@@ -18,7 +18,7 @@ OBJS := $(patsubst $(SRC_DIR)/%, $(BUILD_DIR)/%, $(OBJS:.s=.o))
 LIBS = $(LIB_RPI3_DRIVERS_DIR)/build/librpi3-drivers.a $(TRANSIENT_OS_DIR)/build/libtransient-os.a
 
 # Compiler and linker flags
-CFLAGS = -fno-exceptions -fno-rtti -Wall -Wextra -I$(INCLUDE_DIR) -I$(LIB_RPI3_DRIVERS_DIR)/include -I$(TRANSIENT_OS_DIR)/include
+CFLAGS = -O1 -nostdlib -fno-exceptions -fno-rtti -Wall -Wextra -I$(INCLUDE_DIR) -I$(LIB_RPI3_DRIVERS_DIR)/include -I$(TRANSIENT_OS_DIR)/include
 
 # Output executable
 TARGET = $(BUILD_DIR)/kernel8.img
