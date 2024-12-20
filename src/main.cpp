@@ -3,31 +3,32 @@
 #include "../rpi3-drivers/include/framebuffer.hpp"
 #include "../rpi3-drivers/include/uart0.hpp"
 #include "../transient-os/include/kernel/kernel.hpp"
+#include "../transient-os/include/kernel/sys/sys_calls.hpp"
 #include "../transient-os/include/utils/concurrency/atomic.hpp"
 
-using namespace kernel::threads;
-
 /**
- * Grid swap thread
- * This thread is responsible for swapping the current and next grids
+ * ### Grid swap thread
+ * @brief This thread is responsible for swapping the current and next grids
  * once all the cell threads have finished updating the next grid.
  */
 void grid_swap_thread(void *arg) {
   GridManager *grid_manager = reinterpret_cast<GridManager *>(arg);
 
   while (true) {
-    if (grid_manager->get_ready_threads() >= 2) {
+    if (grid_manager->get_ready_threads() >= CELL_COUNT) {
       AtomicBlock guard;
       grid_manager->swap_grids();
     }
 
-    kernel::yield();
+    // Print message and effectively pass control to the next thread (since this
+    // is a system call)
+    kernel::sys::puts("Grid swap thread done!\n");
   }
 }
 
 /**
- * Cell thread
- * This thread is responsible for updating the state of a single cell
+ * ### Cell thread
+ * @brief This thread is responsible for updating the state of a single cell
  * in the grid.
  */
 void cell_thread(void *arg) {
@@ -106,7 +107,7 @@ void cell_thread(void *arg) {
     }
 
     // Pass control to the next thread
-    kernel::yield();
+    kernel::sys::yield();
   }
 }
 
@@ -147,7 +148,7 @@ int main() {
 
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
-      const uint64_t burst_time = clock::random_range(1800, 2500);
+      const uint64_t burst_time = clock::random_range(1900, 2500);
 
       threads[i][j].init(&cell_thread, burst_time, &args[i][j]);
       args[i][j].init(&grid_manager, i, j);
