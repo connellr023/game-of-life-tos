@@ -20,9 +20,8 @@ void grid_swap_thread(void *arg) {
       grid_manager->swap_grids();
     }
 
-    // Print message and effectively pass control to the next thread (since this
-    // is a system call)
-    kernel::sys::puts("Grid swap thread done!\n");
+    // Pass control to the next thread
+    kernel::sys::yield();
   }
 }
 
