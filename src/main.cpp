@@ -1,4 +1,4 @@
-#include "../include/grid.hpp"
+#include "../include/cells.hpp"
 #include "../rpi3-drivers/include/clock.hpp"
 #include "../rpi3-drivers/include/framebuffer.hpp"
 #include "../rpi3-drivers/include/uart0.hpp"
@@ -12,7 +12,7 @@
  * once all the cell threads have finished updating the next grid.
  */
 void grid_swap_thread(void *arg) {
-  GridManager *grid_manager = reinterpret_cast<GridManager *>(arg);
+  CellGridManager *grid_manager = reinterpret_cast<CellGridManager *>(arg);
 
   while (true) {
     if (grid_manager->get_ready_threads() >= CELL_COUNT) {
@@ -31,7 +31,7 @@ void grid_swap_thread(void *arg) {
  * in the grid.
  */
 void cell_thread(void *arg) {
-  CellThreadArg *cell = reinterpret_cast<CellThreadArg *>(arg);
+  Cell *cell = reinterpret_cast<Cell *>(arg);
 
   while (true) {
     // Render the cell
@@ -119,7 +119,6 @@ int main() {
     return 1;
   }
 
-  framebuffer::fill_screen(CELL_DEAD_COLOR);
   uart0::puts("Framebuffer initialized\n");
 
   // Game initialization
@@ -134,10 +133,10 @@ int main() {
     }
   }
 
-  CellThreadArg args[GRID_ROWS][GRID_COLS];
+  Cell args[GRID_ROWS][GRID_COLS];
   ThreadControlBlock threads[GRID_ROWS][GRID_COLS];
 
-  GridManager grid_manager;
+  CellGridManager grid_manager;
   grid_manager.init(&grid_a, &grid_b);
 
   ThreadControlBlock grid_swap_thread_tcb;

@@ -1,15 +1,16 @@
-#ifndef GRID_HPP
-#define GRID_HPP
+#ifndef CELLS_HPP
+#define CELLS_HPP
 
 #include <stdint.h>
 
 #define GRID_ROWS 15
-#define GRID_COLS 15
+#define GRID_COLS 16
 #define CELL_COUNT (GRID_ROWS * GRID_COLS)
 
 #define CELL_PIXEL_SIZE 16
 #define CELL_ALIVE_COLOR 0xFFFFFF
-#define CELL_DEAD_COLOR 0x000000
+#define CELL_DEAD_COLOR_1 0x000000
+#define CELL_DEAD_COLOR_2 0x0C0C0C
 
 enum class CellState {
   Dead,
@@ -25,7 +26,7 @@ public:
   void set_cell(int x, int y, CellState state) { this->grid[x][y] = state; }
 };
 
-class GridManager {
+class CellGridManager {
 private:
   bool current_grid;
   uint32_t ready_threads;
@@ -49,15 +50,15 @@ public:
   void increment_ready_threads() { this->ready_threads++; }
 };
 
-class CellThreadArg {
+class Cell {
 private:
-  GridManager *grid_manager;
+  CellGridManager *grid_manager;
 
   int x;
   int y;
 
 public:
-  void init(GridManager *grid_manager, int x, int y) {
+  void init(CellGridManager *grid_manager, int x, int y) {
     this->grid_manager = grid_manager;
     this->x = x;
     this->y = y;
@@ -70,9 +71,9 @@ public:
     return this->grid_manager->get_current_grid()->get_cell(x, y);
   }
 
-  GridManager *get_grid_manager() { return this->grid_manager; }
+  CellGridManager *get_grid_manager() { return this->grid_manager; }
 
   void render() const;
 };
 
-#endif // GRID_HPP
+#endif // CELLS_HPP

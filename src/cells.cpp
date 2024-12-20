@@ -1,10 +1,11 @@
-#include "../include/grid.hpp"
+#include "../include/cells.hpp"
 #include "../rpi3-drivers/include/framebuffer.hpp"
 
-void CellThreadArg::render() const {
+void Cell::render() const {
   const uint32_t color = this->get_current_state() == CellState::Alive
                              ? CELL_ALIVE_COLOR
-                             : CELL_DEAD_COLOR;
+                         : (this->x + this->y) % 2 == 0 ? CELL_DEAD_COLOR_1
+                                                        : CELL_DEAD_COLOR_2;
 
   const int screen_x = this->x * CELL_PIXEL_SIZE;
   const int screen_y = this->y * CELL_PIXEL_SIZE;
@@ -14,7 +15,7 @@ void CellThreadArg::render() const {
   framebuffer::draw_rect(screen_x, screen_y, screen_x_end, screen_y_end, color);
 }
 
-CellGrid *GridManager::get_current_grid() {
+CellGrid *CellGridManager::get_current_grid() {
   if (this->current_grid) {
     return this->grid_a;
   } else {
@@ -22,7 +23,7 @@ CellGrid *GridManager::get_current_grid() {
   }
 }
 
-CellGrid *GridManager::get_next_grid() {
+CellGrid *CellGridManager::get_next_grid() {
   if (this->current_grid) {
     return this->grid_b;
   } else {
@@ -30,7 +31,7 @@ CellGrid *GridManager::get_next_grid() {
   }
 }
 
-void GridManager::swap_grids() {
+void CellGridManager::swap_grids() {
   this->current_grid = !this->current_grid;
   this->ready_threads = 0;
 }
