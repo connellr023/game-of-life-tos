@@ -16,7 +16,7 @@ void grid_swap_thread(void *arg) {
 
   while (true) {
     if (grid_manager->get_ready_threads() >= CELL_COUNT) {
-      // AtomicBlock guard;
+      AtomicGuard guard;
       grid_manager->swap_grids();
     }
 
@@ -110,23 +110,6 @@ void cell_thread(void *arg) {
   }
 }
 
-void test_thread(void *) {
-  int *time_ptr = reinterpret_cast<int *>(kernel::sys::heap_alloc(sizeof(int)));
-  *time_ptr = 0;
-
-  while (true) {
-    // Print time
-    uart0::puts("Secs: ");
-    uart0::hex(*time_ptr);
-    uart0::puts("\n");
-
-    kernel::sys::sleep(1e6);
-
-    // Increment time
-    (*time_ptr)++;
-  }
-}
-
 int main() {
   uart0::init();
   kernel::set_output_handler(&uart0::puts);
@@ -185,15 +168,6 @@ int main() {
   // Prepare the grid swap thread
   if (!kernel::prepare_thread(&grid_swap_thread_tcb)) {
     uart0::puts("Failed to schedule grid swap thread\n");
-    return 1;
-  }
-
-  // Prepare the test thread
-  ThreadControlBlock test_thread_tcb;
-  test_thread_tcb.init(&test_thread, 1000);
-
-  if (!kernel::prepare_thread(&test_thread_tcb)) {
-    uart0::puts("Failed to schedule test thread\n");
     return 1;
   }
 
