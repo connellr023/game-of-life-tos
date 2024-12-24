@@ -110,6 +110,27 @@ void cell_thread(void *arg) {
   }
 }
 
+void test_thread(void *) {
+  // Fill thread heap
+  uint64_t *ptr1 = nullptr;
+
+  do {
+    ptr1 = reinterpret_cast<uint64_t *>(
+        kernel::sys::heap_alloc(sizeof(uint64_t) * 50));
+
+    if (ptr1 == nullptr) {
+      uart0::puts("Test thread heap allocation failed\n");
+      return;
+    }
+
+    ptr1[0] = 0x69;
+    ptr1[1] = 0x420;
+
+    uart0::hex(reinterpret_cast<uint64_t>(ptr1));
+    uart0::puts("\n");
+  } while (true);
+}
+
 int main() {
   uart0::init();
   kernel::set_output_handler(&uart0::puts);
@@ -146,7 +167,7 @@ int main() {
 
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
-      const uint64_t burst_time = clock::random_range(1900, 2500);
+      const uint64_t burst_time = clock::random_range(1400, 2000);
 
       threads[i][j].init(&cell_thread, burst_time, &args[i][j]);
       args[i][j].init(&grid_manager, i, j);
@@ -155,19 +176,28 @@ int main() {
     }
   }
 
-  // Schedule each thread
+  // Prepare each thread
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
-      if (!kernel::schedule_thread(&threads[i][j])) {
+      if (!kernel::prepare_thread(&threads[i][j])) {
         uart0::puts("Failed to schedule thread\n");
         return 1;
       }
     }
   }
 
-  // Schedule the grid swap thread
-  if (!kernel::schedule_thread(&grid_swap_thread_tcb)) {
+  // Prepare the grid swap thread
+  if (!kernel::prepare_thread(&grid_swap_thread_tcb)) {
     uart0::puts("Failed to schedule grid swap thread\n");
+    return 1;
+  }
+
+  // Prepare the test thread
+  ThreadControlBlock test_thread_tcb;
+  test_thread_tcb.init(&test_thread, 1000);
+
+  if (!kernel::prepare_thread(&test_thread_tcb)) {
+    uart0::puts("Failed to schedule test thread\n");
     return 1;
   }
 

@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define GRID_ROWS 15
-#define GRID_COLS 16
+#define GRID_ROWS 12
+#define GRID_COLS 12
 #define CELL_COUNT (GRID_ROWS * GRID_COLS)
 
 #define CELL_PIXEL_SIZE 16
