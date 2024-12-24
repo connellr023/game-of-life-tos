@@ -4,7 +4,7 @@
 #include "../rpi3-drivers/include/uart0.hpp"
 #include "../transient-os/include/kernel/kernel.hpp"
 #include "../transient-os/include/kernel/sys/sys_calls.hpp"
-#include "../transient-os/include/utils/concurrency/atomic.hpp"
+#include "../transient-os/include/utils/concurrency/atomic_guard.hpp"
 
 /**
  * ### Grid swap thread
@@ -16,7 +16,7 @@ void grid_swap_thread(void *arg) {
 
   while (true) {
     if (grid_manager->get_ready_threads() >= CELL_COUNT) {
-      AtomicBlock guard;
+      // AtomicBlock guard;
       grid_manager->swap_grids();
     }
 
@@ -42,7 +42,7 @@ void cell_thread(void *arg) {
 
     // Safe get the current state
     {
-      AtomicBlock guard;
+      AtomicGuard guard;
       current_state = cell->get_current_state();
     }
 
@@ -65,7 +65,7 @@ void cell_thread(void *arg) {
         CellState state;
 
         {
-          AtomicBlock guard;
+          // AtomicBlock guard;
           state = cell->get_grid_manager()->get_current_grid()->get_cell(x, y);
         }
 
@@ -94,14 +94,14 @@ void cell_thread(void *arg) {
 
     // Safe update the next grid
     {
-      AtomicBlock guard;
+      AtomicGuard guard;
       cell->get_grid_manager()->get_next_grid()->set_cell(
           cell->get_x(), cell->get_y(), next_state);
     }
 
     // Safe increment the number of ready threads
     {
-      AtomicBlock guard;
+      AtomicGuard guard;
       cell->get_grid_manager()->increment_ready_threads();
     }
 
@@ -111,24 +111,20 @@ void cell_thread(void *arg) {
 }
 
 void test_thread(void *) {
-  // Fill thread heap
-  uint64_t *ptr1 = nullptr;
+  int *time_ptr = reinterpret_cast<int *>(kernel::sys::heap_alloc(sizeof(int)));
+  *time_ptr = 0;
 
-  do {
-    ptr1 = reinterpret_cast<uint64_t *>(
-        kernel::sys::heap_alloc(sizeof(uint64_t) * 50));
-
-    if (ptr1 == nullptr) {
-      uart0::puts("Test thread heap allocation failed\n");
-      return;
-    }
-
-    ptr1[0] = 0x69;
-    ptr1[1] = 0x420;
-
-    uart0::hex(reinterpret_cast<uint64_t>(ptr1));
+  while (true) {
+    // Print time
+    uart0::puts("Secs: ");
+    uart0::hex(*time_ptr);
     uart0::puts("\n");
-  } while (true);
+
+    kernel::sys::sleep(1e6);
+
+    // Increment time
+    (*time_ptr)++;
+  }
 }
 
 int main() {
@@ -167,7 +163,7 @@ int main() {
 
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
-      const uint64_t burst_time = clock::random_range(1400, 2000);
+      const uint64_t burst_time = clock::random_range(1200, 1500);
 
       threads[i][j].init(&cell_thread, burst_time, &args[i][j]);
       args[i][j].init(&grid_manager, i, j);
