@@ -2,9 +2,10 @@
 #include "../rpi3-drivers/include/clock.hpp"
 #include "../rpi3-drivers/include/framebuffer.hpp"
 #include "../rpi3-drivers/include/uart0.hpp"
-#include "../transient-os/include/kernel/kernel.hpp"
-#include "../transient-os/include/kernel/sys/sys_calls.hpp"
-#include "../transient-os/include/utils/concurrency/atomic_guard.hpp"
+
+#include "../transient-os/include/api/concurrency/atomic_guard.hpp"
+#include "../transient-os/include/api/sys/sys_calls.hpp"
+#include "../transient-os/include/api/thread/thread_handle.hpp"
 
 /**
  * ### Grid swap thread
@@ -13,6 +14,7 @@
  */
 void grid_swap_thread(void *arg) {
   CellGridManager *grid_manager = reinterpret_cast<CellGridManager *>(arg);
+  grid_manager->mark_as_ready();
 
   while (true) {
     if (grid_manager->get_ready_threads() >= CELL_COUNT) {
@@ -21,7 +23,7 @@ void grid_swap_thread(void *arg) {
     }
 
     // Pass control to the next thread
-    kernel::sys::yield();
+    api::sys::yield();
   }
 }
 
@@ -32,6 +34,11 @@ void grid_swap_thread(void *arg) {
  */
 void cell_thread(void *arg) {
   Cell *cell = reinterpret_cast<Cell *>(arg);
+
+  // Wait for the grid manager to be ready
+  while (!cell->get_grid_manager()->can_start()) {
+    api::sys::yield();
+  }
 
   while (true) {
     // Render the cell
@@ -106,13 +113,13 @@ void cell_thread(void *arg) {
     }
 
     // Pass control to the next thread
-    kernel::sys::yield();
+    api::sys::yield();
   }
 }
 
 int main() {
   uart0::init();
-  kernel::set_output_handler(&uart0::puts);
+  api::sys::set_output_handler(&uart0::puts);
 
   if (!framebuffer::init()) {
     uart0::puts("Framebuffer initialization failed\n");
@@ -134,45 +141,43 @@ int main() {
   }
 
   Cell args[GRID_ROWS][GRID_COLS];
-  ThreadControlBlock threads[GRID_ROWS][GRID_COLS];
 
   CellGridManager grid_manager;
   grid_manager.init(&grid_a, &grid_b);
 
-  ThreadControlBlock grid_swap_thread_tcb;
-  grid_swap_thread_tcb.init(&grid_swap_thread, 1000, &grid_manager);
-
-  uart0::puts("Declared arrays\n");
-
+  // Initialize cell threads
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
-      const uint64_t burst_time = clock::random_range(1200, 1500);
-
-      threads[i][j].init(&cell_thread, burst_time, &args[i][j]);
       args[i][j].init(&grid_manager, i, j);
-
-      uart0::puts("Thread initialized\n");
     }
   }
 
-  // Prepare each thread
+  uart0::puts("Declared arrays\n");
+
+  // Spawn cell threads
+  ThreadHandle cell_handles[GRID_ROWS][GRID_COLS];
+
   for (int i = 0; i < GRID_ROWS; i++) {
     for (int j = 0; j < GRID_COLS; j++) {
-      if (!kernel::prepare_thread(&threads[i][j])) {
-        uart0::puts("Failed to schedule thread\n");
+      const uint64_t quantum = clock::random_range(1500, 1600);
+
+      if (!api::sys::spawn_thread(&cell_handles[i][j], &cell_thread, quantum,
+                                  &args[i][j])) {
+        uart0::puts("Failed to spawn cell thread\n");
         return 1;
       }
     }
   }
 
-  // Prepare the grid swap thread
-  if (!kernel::prepare_thread(&grid_swap_thread_tcb)) {
-    uart0::puts("Failed to schedule grid swap thread\n");
+  // Spawn the grid swap thread
+  ThreadHandle grid_swap_thread_handle;
+
+  if (!api::sys::spawn_thread(&grid_swap_thread_handle, &grid_swap_thread, 1000,
+                              &grid_manager)) {
+    uart0::puts("Failed to spawn grid swap thread\n");
     return 1;
   }
 
-  uart0::puts("Starting kernel\n");
-  kernel::start();
-
+  // Kill the main thread
   return 0;
 }

@@ -28,6 +28,7 @@ public:
 
 class CellGridManager {
 private:
+  bool is_ready;
   bool current_grid;
   uint32_t ready_threads;
 
@@ -36,6 +37,7 @@ private:
 
 public:
   void init(CellGrid *grid_a, CellGrid *grid_b) {
+    this->is_ready = false;
     this->current_grid = true;
     this->ready_threads = 0;
     this->grid_a = grid_a;
@@ -48,6 +50,9 @@ public:
 
   uint32_t get_ready_threads() { return this->ready_threads; }
   void increment_ready_threads() { this->ready_threads++; }
+
+  bool can_start() { return this->is_ready; }
+  void mark_as_ready() { this->is_ready = true; }
 };
 
 class Cell {
