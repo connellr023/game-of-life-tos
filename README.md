@@ -8,7 +8,7 @@
 
 ## Overview
 
-This project is a simulation of _Conway's Game of Life_ on a Raspberry Pi using **241** threads. The threads are created using `libtransient-os` and the game is displayed through the framebuffer.
+This project is a simulation of _Conway's Game of Life_ on a Raspberry Pi using **257** threads. The threads are created using `libtransient-os` and the game is displayed through the framebuffer.
 
 `libtransient-os` or $\text{Transient OS}$ is a time-sharing operating system I developed that supplies an API for scheduling threads in a bare-mental environment for the Raspberry Pi 3. See the main repository [here](https://github.com/connellr023/transient-os).
 
