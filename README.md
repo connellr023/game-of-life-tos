@@ -16,4 +16,4 @@ Additionally, drivers (`librpi3-drivers`) for the framebuffer, UART, and system 
 
 ## Multi-threading
 
-Each cell in the grid is assigned to a thread. Additionally, there is another thread that is responsible for swapping the grids. Since the grid is $15 \times 16$, there are a total of $240$ cell threads and $1$ swap thread.
+Each cell in the grid is assigned to a thread. Additionally, there is another thread that is responsible for swapping the grids. Since the grid is $16 \times 16$, there are a total of $257$ cell threads and $1$ swap thread.
