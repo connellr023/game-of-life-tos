@@ -118,33 +118,18 @@ void cell_thread(void *arg) {
   }
 }
 
-// void test_atomic_swap() {
-//   volatile uint32_t shared_value = 42; // Shared value in memory
+void test_user_thread(void *) {
+  for (int i = 0; i < 10; i++) {
+    api::sys::puts("User thread\n");
+  }
 
-//   if ((reinterpret_cast<uintptr_t>(&shared_value) & 0x3) != 0) {
-//     while (true) {
-//       uart0::puts("Shared value is not 4-byte aligned\n");
-//     }
-//   }
+  // Try an and illegally read from SPSR_EL1
+  uint64_t spsr;
+  asm volatile("mrs %0, SPSR_EL1" : "=r"(spsr));
 
-//   // Print MAIR_EL1 register
-//   uint64_t mair_el1;
-//   asm volatile("mrs %0, mair_el1" : "=r"(mair_el1));
-
-//   uart0::puts("MAIR_EL1: ");
-//   uart0::hex(mair_el1);
-//   uart0::puts("\n");
-
-//   uint32_t old_value = utils::atomic_swap(&shared_value, 100);
-
-//   uart0::puts("Old value: ");
-//   uart0::hex(old_value);
-//   uart0::puts("\n");
-
-//   uart0::puts("New value: ");
-//   uart0::hex(shared_value);
-//   uart0::puts("\n");
-// }
+  // Should never reach here
+  api::sys::puts("SPSR_EL1!");
+}
 
 int main() {
   uart0::init();
@@ -156,8 +141,6 @@ int main() {
   }
 
   uart0::puts("Framebuffer initialized\n");
-
-  // test_atomic_swap();
 
   // Game initialization
   CellGrid grid_a;
@@ -183,8 +166,6 @@ int main() {
     }
   }
 
-  uart0::puts("Declared arrays\n");
-
   // Spawn cell threads
   ThreadHandle cell_handles[GRID_ROWS][GRID_COLS];
 
@@ -206,6 +187,15 @@ int main() {
   if (!api::sys::spawn_kernel_thread(&grid_swap_thread_handle,
                                      &grid_swap_thread, 1000, &grid_manager)) {
     uart0::puts("Failed to spawn grid swap thread\n");
+    return 1;
+  }
+
+  // Spawn a user thread
+  ThreadHandle user_thread_handle;
+
+  if (!api::sys::spawn_user_thread(&user_thread_handle, &test_user_thread,
+                                   1000)) {
+    uart0::puts("Failed to spawn user thread\n");
     return 1;
   }
 
