@@ -6,6 +6,7 @@
 #include "../transient-os/include/api/concurrency/atomic_guard.hpp"
 #include "../transient-os/include/api/sys/sys_calls.hpp"
 #include "../transient-os/include/api/thread/thread_handle.hpp"
+#include "../transient-os/include/utils/mem_utils.hpp"
 
 /**
  * ### Grid swap thread
@@ -117,6 +118,34 @@ void cell_thread(void *arg) {
   }
 }
 
+// void test_atomic_swap() {
+//   volatile uint32_t shared_value = 42; // Shared value in memory
+
+//   if ((reinterpret_cast<uintptr_t>(&shared_value) & 0x3) != 0) {
+//     while (true) {
+//       uart0::puts("Shared value is not 4-byte aligned\n");
+//     }
+//   }
+
+//   // Print MAIR_EL1 register
+//   uint64_t mair_el1;
+//   asm volatile("mrs %0, mair_el1" : "=r"(mair_el1));
+
+//   uart0::puts("MAIR_EL1: ");
+//   uart0::hex(mair_el1);
+//   uart0::puts("\n");
+
+//   uint32_t old_value = utils::atomic_swap(&shared_value, 100);
+
+//   uart0::puts("Old value: ");
+//   uart0::hex(old_value);
+//   uart0::puts("\n");
+
+//   uart0::puts("New value: ");
+//   uart0::hex(shared_value);
+//   uart0::puts("\n");
+// }
+
 int main() {
   uart0::init();
   api::sys::set_output_handler(&uart0::puts);
@@ -127,6 +156,8 @@ int main() {
   }
 
   uart0::puts("Framebuffer initialized\n");
+
+  // test_atomic_swap();
 
   // Game initialization
   CellGrid grid_a;
@@ -161,8 +192,8 @@ int main() {
     for (int j = 0; j < GRID_COLS; j++) {
       const uint64_t quantum = clock::random_range(1500, 1600);
 
-      if (!api::sys::spawn_thread(&cell_handles[i][j], &cell_thread, quantum,
-                                  &args[i][j])) {
+      if (!api::sys::spawn_kernel_thread(&cell_handles[i][j], &cell_thread,
+                                         quantum, &args[i][j])) {
         uart0::puts("Failed to spawn cell thread\n");
         return 1;
       }
@@ -172,8 +203,8 @@ int main() {
   // Spawn the grid swap thread
   ThreadHandle grid_swap_thread_handle;
 
-  if (!api::sys::spawn_thread(&grid_swap_thread_handle, &grid_swap_thread, 1000,
-                              &grid_manager)) {
+  if (!api::sys::spawn_kernel_thread(&grid_swap_thread_handle,
+                                     &grid_swap_thread, 1000, &grid_manager)) {
     uart0::puts("Failed to spawn grid swap thread\n");
     return 1;
   }
